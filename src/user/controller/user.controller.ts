@@ -17,6 +17,7 @@ import {
 import { UserService } from '../service/user.service';
 import { CreateUserDto } from '../dto/user.dto';
 import { AuthGuard } from '../guards/auth.guard';
+import { RequestWithUser } from '../types/request-with-user.interface';
 
 @ApiTags('Users')
 @Controller('user')
@@ -37,7 +38,7 @@ export class UserController {
 
   @Get('/me')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth() // Swagger will now require a Bearer token
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current authenticated user (Requires Bearer Token)',
   })
@@ -46,8 +47,9 @@ export class UserController {
     status: 401,
     description: 'Unauthorized - Missing or invalid token',
   })
-  async getMe(@Req() req: any) {
+  async getMe(@Req() req: RequestWithUser) {
     const userId = req.user.sub;
+
     if (!userId) {
       throw new NotFoundException('Invalid token payload');
     }

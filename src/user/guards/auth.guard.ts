@@ -6,27 +6,29 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { RequestWithUser } from '../types/request-with-user.interface';
+import { JwtPayloadDto } from '../dto/jwt-payload.dto';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
-      throw new UnauthorizedException('Token missing or invalid');
+      throw new UnauthorizedException();
     }
 
     try {
-      const payload = this.jwtService.verify(token, {
+      const payload: JwtPayloadDto = this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET,
       });
 
-      request['user'] = payload;
-    } catch (error) {
-      throw new UnauthorizedException('Token verification failed');
+      request.user = payload;
+    } catch {
+      throw new UnauthorizedException();
     }
 
     return true;
