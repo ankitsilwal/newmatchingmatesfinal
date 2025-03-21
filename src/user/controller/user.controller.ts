@@ -4,36 +4,58 @@ import {
   Controller,
   Get,
   NotFoundException,
-  Param,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UserService } from '../service/user.service';
+import { CreateUserDto } from '../dto/user.dto';
+import { AuthGuard } from '../guards/auth.guard';
 
+@ApiTags('Users')
 @Controller('user')
 export class UserController {
   constructor(private userService: UserService) {}
 
   @Post('/create')
-  async createUser(@Body() dto: any) {
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ status: 201, description: 'User successfully created' })
+  @ApiResponse({ status: 400, description: 'Failed to create user' })
+  async createUser(@Body() dto: CreateUserDto) {
     try {
-      const create = await this.userService.createUser(dto);
-      return create; // Ensure this returns the created user object
+      return await this.userService.createUser(dto);
     } catch (error) {
       throw new BadRequestException('Failed to create user');
     }
   }
 
-  @Get('/:id')
-  async getById(@Param('id') id: string) {
-    try {
-      const user = await this.userService.getById(id);
-      if (!user) {
-        throw new NotFoundException(`User with ID ${id} not found`);
-      }
-      return user;
-    } catch (error) {
-      console.error('Error in controller:', error);
-      throw new BadRequestException('Failed to fetch user');
+  @Get('/me')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth() // Swagger will now require a Bearer token
+  @ApiOperation({
+    summary: 'Get current authenticated user (Requires Bearer Token)',
+  })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Missing or invalid token',
+  })
+  async getMe(@Req() req: any) {
+    const userId = req.user.sub;
+    if (!userId) {
+      throw new NotFoundException('Invalid token payload');
     }
+
+    const user = await this.userService.getById(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user;
   }
 }

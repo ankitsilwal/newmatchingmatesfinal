@@ -13,27 +13,30 @@ export class AuthService {
   ) {}
 
   async signin(username: string, password: string) {
-    const userSign = await this.findUserByusername(username);
+    const userSign = await this.findUserByUsername(username);
     if (!userSign) {
       throw new UnauthorizedException('User Not Found');
     }
 
-    const Validpassword = await bcrypt.compare(password, userSign.password);
-    if (!Validpassword) {
+    const isValidPassword = await bcrypt.compare(password, userSign.password);
+    if (!isValidPassword) {
       throw new UnauthorizedException('Invalid password');
     }
 
     const payload = {
       sub: userSign.id,
+      username: userSign.username,
     };
+
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
+      expiresIn: '1h',
     });
 
     return { accessToken, payload };
   }
 
-  async findUserByusername(username: string): Promise<User | null> {
+  async findUserByUsername(username: string): Promise<User | null> {
     return this.userModel.findOne({ username });
   }
 }
